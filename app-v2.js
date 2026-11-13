@@ -877,7 +877,7 @@ function buildPdf(inv){
   t("Customer signature",sx,y+70,{s:7,c:GRAY}); t("Date",W-140,y+70,{s:7,c:GRAY}); t("Printed name",sx,y+100,{s:7,c:GRAY});
   y=Math.max(py,y+100)+16;
   const terms=[["Payment.",isPaid?"Paid in full. Thank you for your business.":"Due within "+net+" days of the invoice date (Net "+net+"). The balance shown reflects payments received to date."],
-    ["Install warranty.","PerformCore warrants its installation for 30 days from the service date. Bubbling, peeling, lifting, edge gaps or contamination caused by the install and reported within that period will be corrected at no charge."],
+    ["Install warranty.","PerformCore warrants its installation for "+(((inv.division||inv.category||"")==="Automotive")?"2 years":"30 days")+" from the service date. Bubbling, peeling, lifting, edge gaps or contamination caused by the install and reported within that period will be corrected at no charge."],
     ["Curing & care.","Do not roll windows down for 3-5 days. Haze or small water pockets are normal and may take up to 30 days to clear. Wait 7 days before cleaning; use ammonia-free cleaner and a soft cloth only."],
     ["Not covered.","Scratches, impact, abrasive or razor cleaning, accidents, pre-existing glass damage, and defroster lines damaged while removing existing film."],
     ["Tint laws.","Customer selected the shades installed and is responsible for compliance with Florida window tint law. PerformCore is not liable for citations or required removal."]];
