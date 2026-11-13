@@ -1,10 +1,10 @@
 /* Life HQ service worker: caches the app so it opens offline.
    Your data is NOT here; it lives in IndexedDB ("lifehq") and is never touched by updates.
    Bump VERSION on every deploy. */
-const VERSION = "lifehq-v2";
+const VERSION = "lifehq-v3";
 const SHELL = [
   "./", "index.html", "app-v2.js", "app-v2.css", "store.js", "manifest.webmanifest",
-  "vendor/jspdf.umd.min.js", "fonts/fonts.css", "fonts/BricolageGrotesque-var.woff2",
+  "vendor/jspdf.umd.min.js", "vendor/supabase.umd.js", "fonts/fonts.css", "fonts/BricolageGrotesque-var.woff2",
   "icons/icon-192.png", "icons/icon-512.png", "icons/icon-maskable-192.png", "icons/icon-maskable-512.png", "icons/apple-touch-icon.png", "icons/favicon-32.png"
 ];
 const url = p => new URL(p, self.registration.scope).href;   // works at any subpath

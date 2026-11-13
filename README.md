@@ -22,3 +22,10 @@ Change the files, bump `VERSION` in `sw.js`, and redeploy. The app picks up the 
 - Files renamed to app-v2.js / app-v2.css so the v1 offline cache can't serve old code with the new page.
 - sw.js VERSION is "lifehq-v2". Code files load network-first (cache when offline); fonts/icons/jsPDF are cache-first. Old lifehq-* caches are deleted.
 - To deploy: replace the repo contents with this folder (delete the old app.js/app.css and IBM Plex fonts), commit, push. Phones pick it up on the next launch.
+
+## Cloud sync (optional)
+- More → Sync (or the cloud pill at the top) → enter your email → enter the 6-digit code (or paste the sign-in link) → done. One time per device.
+- This device stays the main copy: everything saves here first and works offline. Changes go up in the background and come down live from your other devices.
+- Conflicts: the newest edit of each item wins. Deletes sync. The first sync after signing in never deletes anything; it merges both sides and uploads everything here.
+- Signed out, the app works exactly as before and makes no network calls (the sync library only loads after you sign in).
+- Backend: Supabase project "life-hq" (table `lifehq_docs`, Row Level Security: each account only sees its own rows; private image bucket `lifehq-assets`). The key in store.js is the public publishable key.
