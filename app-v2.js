@@ -176,7 +176,7 @@ const S = {
     {k:"notes",label:"Notes",type:"textarea"}]}
 };
 const COLS = Object.keys(S).filter(k=>!S[k].coll);
-const TABS = [["today","Today"],["plan","Plan"],["tasks","Tasks"],["training","Training"],["auto","Automotive"],["res","Residential"],["com","Commercial"],["people","People"],["invoices","Invoices"],["money","Money"],["ideas","Ideas"],["designs","Designs"]];
+const TABS = [["today","Today"],["plan","Plan"],["tasks","Tasks"],["training","Training"],["auto","Automotive"],["res","Residential"],["com","Commercial"],["people","People"],["invoices","Invoices"],["money","Money"],["ideas","Ideas"],["designs","Designs"],["more","More"]];
 
 // ---------- state ----------
 const data = Object.fromEntries(COLS.map(c=>[c,[]]));
@@ -265,64 +265,130 @@ function dataIssues(){
 }
 
 // ---------- render ----------
-function nav(){
-  const r=route();
-  // every badge uses the same helper as the tab it points to, and says what it counts on hover / to screen readers
+// ---------- shell: iOS tab bar (phone), sidebar (desktop), collapsing title ----------
+const ICON={
+  today:'<path d="M3.5 10.6 12 3.8l8.5 6.8V19a1.5 1.5 0 0 1-1.5 1.5h-4.2v-5.8H9.2v5.8H5A1.5 1.5 0 0 1 3.5 19z"/>',
+  tasks:'<circle cx="12" cy="12" r="8.6"/><path d="m8.2 12.4 2.6 2.6 5-5.4"/>',
+  jobs:'<path d="M4.6 12.4 6.5 7.5A2 2 0 0 1 8.4 6.2h7.2a2 2 0 0 1 1.9 1.3l1.9 4.9"/><rect x="2.8" y="12.2" width="18.4" height="5.6" rx="1.8"/><path d="M6 17.8v2M18 17.8v2"/><path d="M6.6 15h.01M17.4 15h.01"/><path d="M9.5 9.2h5" opacity=".5"/>',
+  money:'<rect x="2.8" y="5.6" width="18.4" height="12.8" rx="2.6"/><circle cx="12" cy="12" r="2.7"/><path d="M6.4 9.4v5.2M17.6 9.4v5.2"/>',
+  more:'<rect x="4" y="4" width="6.6" height="6.6" rx="1.8"/><rect x="13.4" y="4" width="6.6" height="6.6" rx="1.8"/><rect x="4" y="13.4" width="6.6" height="6.6" rx="1.8"/><rect x="13.4" y="13.4" width="6.6" height="6.6" rx="1.8"/>',
+  plan:'<rect x="3.6" y="5" width="16.8" height="15.4" rx="2.6"/><path d="M3.6 9.8h16.8M8.2 3v3.6M15.8 3v3.6M7.8 13.6h2.4M13.8 13.6h2.4M7.8 16.8h2.4"/>',
+  training:'<path d="M6.6 6.8v10.4M17.4 6.8v10.4M3.6 9.4v5.2M20.4 9.4v5.2M6.6 12h10.8"/>',
+  people:'<circle cx="9" cy="8.4" r="3.2"/><path d="M3.4 19.6c.6-3.2 2.8-5 5.6-5s5 1.8 5.6 5"/><circle cx="17.2" cy="9.4" r="2.4"/><path d="M16 14.7c2.3.1 4 1.6 4.6 4.5"/>',
+  ideas:'<path d="M9.2 17.6h5.6M10.2 20.6h3.6"/><path d="M12 3.4a6 6 0 0 0-3.6 10.8c.7.6 1.1 1.4 1.1 2.3v1.1h5v-1.1c0-.9.4-1.7 1.1-2.3A6 6 0 0 0 12 3.4z"/>',
+  designs:'<path d="M12 3.4a8.6 8.6 0 1 0 0 17.2c1.2 0 1.8-.8 1.8-1.6 0-1.3-1-1.8-1-3 0-1 .8-1.6 1.8-1.6h2.3a3.8 3.8 0 0 0 3.7-3.8c0-4-3.9-7.2-8.6-7.2z"/><circle cx="7.6" cy="11.2" r="1"/><circle cx="10.4" cy="7.5" r="1"/><circle cx="15" cy="7.6" r="1"/>',
+  invoices:'<path d="M6 3.4h12v17.2l-2.4-1.5-2.4 1.5-2.4-1.5-2.4 1.5L6 19.1z"/><path d="M9 8h6M9 11.4h6M9 14.8h3.6"/>',
+  ledger:'<path d="M4 19.5h16"/><rect x="5.4" y="11" width="3" height="6" rx="1"/><rect x="10.5" y="6.5" width="3" height="10.5" rx="1"/><rect x="15.6" y="9" width="3" height="8" rx="1"/>',
+  house:'<path d="M4 11 12 4.5l8 6.5"/><path d="M6 9.5V20h12V9.5"/><path d="M10 20v-5h4v5"/>',
+  building:'<rect x="5" y="3.5" width="14" height="17" rx="1.6"/><path d="M9 7.5h.01M15 7.5h.01M9 11h.01M15 11h.01M9 14.5h.01M15 14.5h.01M10.5 20.5v-3h3v3"/>',
+  film:'<rect x="3.5" y="4.5" width="17" height="15" rx="2.4"/><path d="M3.5 9.5 9 4.5M3.5 15l10.5-10.5M8 19.5 20.5 7M14 19.5l6.5-6.5"/>',
+  settings:'<circle cx="12" cy="12" r="3"/><path d="M12 2.8v2.4M12 18.8v2.4M21.2 12h-2.4M5.2 12H2.8M18.5 5.5l-1.7 1.7M7.2 16.8l-1.7 1.7M18.5 18.5l-1.7-1.7M7.2 7.2 5.5 5.5"/>',
+  backup:'<path d="M12 3.8v10.6M7.6 10l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-2.6"/>',
+  key:'<rect x="2.8" y="6" width="18.4" height="12" rx="2.6"/><path d="M6.8 10h.01M10.4 10h.01M14 10h.01M17.4 10h.01M7.6 14h8.8"/>',
+  plus:'<path d="M12 5v14M5 12h14"/>',
+  chev:'<path d="m9.5 5.8 6.2 6.2-6.2 6.2"/>',
+  clock:'<circle cx="12" cy="12" r="8.6"/><path d="M12 7.4V12l3 2"/>',
+  bolt:'<path d="M13 3 5 13.5h6L10.6 21 19 10.4h-6z"/>'
+};
+const svg=(k,cls)=>`<svg class="ic${cls?" "+cls:""}" viewBox="0 0 24 24" aria-hidden="true">${ICON[k]||""}</svg>`;
+const HUE={today:"#0B7A85",tasks:"#2F6BFF",jobs:"#0B7A85",auto:"#0B7A85",res:"#1F9D62",com:"#3D63DD",money:"#159957",invoices:"#0B7A85",plan:"#5B5BD6",training:"#F06A35",people:"#A855F7",ideas:"#E3A008",designs:"#EC4899",film:"#64748B",settings:"#64748B",backup:"#0EA5E9",key:"#64748B",clock:"#5B5BD6"};
+const GROUP={today:"today",tasks:"tasks",auto:"jobs",res:"jobs",com:"jobs",invoices:"money",money:"money",plan:"more",training:"more",people:"more",ideas:"more",designs:"more",more:"more"};
+const TITLE={today:"Today",plan:"Plan",tasks:"Tasks",training:"Training",auto:"Jobs",res:"Jobs",com:"Jobs",people:"People",invoices:"Money",money:"Money",ideas:"Ideas",designs:"Designs",more:"More"};
+const uiMem=(k,v)=>{ try{ if(v===undefined) return localStorage.getItem("lifehq:ui:"+k); localStorage.setItem("lifehq:ui:"+k,v); }catch(_){ return null; } };
+const lastDiv=()=>["auto","res","com"].includes(uiMem("div"))?uiMem("div"):"auto";
+const lastMoney=()=>["invoices","money"].includes(uiMem("money"))?uiMem("money"):"invoices";
+function counts(){
   const R=rx(), tw=trainingWeek(), up=upcomingTints(), td=tasksDue(), pd=peopleDue(), t=todayISO();
-  const upc=d=>{ const n=up.filter(a=>divOf(a)===d).length; return [n,false,n+" upcoming job"+(n===1?"":"s")]; };
-  const ct={invoices:[R.openInv.length,R.openInv.some(m=>invState(m)==="Overdue"),R.openInv.length+" open invoice"+(R.openInv.length===1?"":"s")],
+  const upc=d=>up.filter(a=>divOf(a)===d).length;
+  return {R,tw,up,td,pd,t,
     tasks:[td.length,td.some(x=>x.due<t),td.length+" due today or overdue"],
-    training:[tw.left,false,tw.left+" workout"+(tw.left===1?"":"s")+" left this week"],
-    auto:upc("Automotive"),res:upc("Residential"),com:upc("Commercial"),
-    people:[pd.length,pd.some(p=>due(p).state==="over"),pd.length+" check-in"+(pd.length===1?"":"s")+" due"],
-    ideas:[data.ideas.length,false,data.ideas.length+" ideas"],designs:[data.designs.length,false,data.designs.length+" designs"]};
-  const n=$("#nav");
-  n.innerHTML=TABS.map(([k,l])=>{ const c=ct[k]; return `<a href="#${k}" ${k===r?'aria-current="page"':""}${c&&c[0]?` title="${esc(c[2])}"`:""}>${l}${c&&c[0]?`<span class="ct${c[1]?" bad":""}" aria-label="${esc(c[2])}">${c[0]}</span>`:""}</a>`; }).join("");
-  const cur=n.querySelector("[aria-current]"); if(cur){ const L=cur.offsetLeft, Rr=L+cur.offsetWidth; if(L<n.scrollLeft) n.scrollLeft=Math.max(0,L-16); else if(Rr>n.scrollLeft+n.clientWidth) n.scrollLeft=Rr-n.clientWidth+16; }
+    jobs:[up.length,false,up.length+" upcoming job"+(up.length===1?"":"s")],
+    auto:[upc("Automotive"),false,"upcoming"],res:[upc("Residential"),false,"upcoming"],com:[upc("Commercial"),false,"upcoming"],
+    money:[R.openInv.length,R.openInv.some(m=>invState(m)==="Overdue"),R.openInv.length+" open invoice"+(R.openInv.length===1?"":"s")],
+    invoices:[R.openInv.length,R.openInv.some(m=>invState(m)==="Overdue"),"open invoices"],
+    training:[tw.left,false,tw.left+" workouts left this week"],
+    people:[pd.length,pd.some(p=>due(p).state==="over"),pd.length+" check-ins due"],
+    more:[pd.length,pd.some(p=>due(p).state==="over"),pd.length+" check-in"+(pd.length===1?"":"s")+" due"],
+    ideas:[0],designs:[0],plan:[0],today:[0]};
 }
+const badge=(c,soft)=>c&&c[0]?`<span class="badge${c[1]?" bad":soft?" soft":""}" aria-label="${esc(c[2]||"")}">${c[0]}</span>`:"";
+function nav(){
+  const r=route(), g=GROUP[r], C=counts();
+  if(["auto","res","com"].includes(r)) uiMem("div",r);
+  if(["invoices","money"].includes(r)) uiMem("money",r);
+  const tabs=[["today","Today","today","#today"],["tasks","Tasks","tasks","#tasks"],["jobs","Jobs","jobs","#"+lastDiv()],["money","Money","money","#"+lastMoney()],["more","More","more","#more"]];
+  $("#tabbar").innerHTML=tabs.map(([k,l,ic,h])=>`<a href="${h}" ${g===k?'aria-current="page"':""}${C[k]&&C[k][0]?` title="${esc(C[k][2])}"`:""}>${svg(ic)}<span>${l}</span>${k==="today"?"":badge(C[k])}</a>`).join("");
+  const si=(k,l,ic)=>`<a class="si" href="#${k}" ${r===k?'aria-current="page"':""}>${svg(ic)}<span>${l}</span>${k==="money"?"":badge(C[k],true)}</a>`;
+  $("#sidenav").innerHTML=si("today","Today","today")+si("tasks","Tasks","tasks")+si("plan","Plan","plan")
+    +`<div class="sgrp">PerformCore</div>`+si("auto","Automotive","jobs")+si("res","Residential","house")+si("com","Commercial","building")+si("invoices","Invoices","invoices")+si("money","Budget &amp; ledger","ledger")
+    +`<div class="sgrp">Life</div>`+si("training","Training","training")+si("people","People","people")+si("ideas","Ideas","ideas")+si("designs","Designs","designs");
+  $("#tb-title").textContent=TITLE[r]||"Life HQ";
+  document.title=r==="today"?"Life HQ":(TITLE[r]||"")+" · Life HQ";
+}
+let lastRoute=null;
 function render(){
   RXC=null;
   $("#today-label").textContent=new Date().toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"});
   nav();
-  const r=route(), v=$("#view");
+  const r=route(), v=$("#view"), changed=r!==lastRoute; lastRoute=r;
   // live data updates re-render the view; keep whatever you were typing in (search, quick add) focused
   const ae=document.activeElement, keep=ae&&ae.id&&v.contains(ae)?{id:ae.id,val:ae.value,s:ae.selectionStart,e:ae.selectionEnd}:null;
-  v.innerHTML = ({today:vToday,plan:vPlan,tasks:vTasks,training:vTraining,auto:vAuto,res:vRes,com:vCom,people:vPeople,money:vMoney,invoices:vInvoices,ideas:vIdeas,designs:vDesigns})[r]();
+  v.innerHTML = ({today:vToday,plan:vPlan,tasks:vTasks,training:vTraining,auto:vAuto,res:vRes,com:vCom,people:vPeople,money:vMoney,invoices:vInvoices,ideas:vIdeas,designs:vDesigns,more:vMore})[r]();
   if(r==="designs") hydrateImages();
+  updateFab();
+  if(changed){ v.classList.remove("enter"); void v.offsetWidth; v.classList.add("enter"); if(!keep) window.scrollTo(0,0);
+    const td=v.querySelector(".week .day.today"); if(td&&td.parentElement.scrollWidth>td.parentElement.clientWidth) td.parentElement.scrollLeft=td.offsetLeft-16; }
   if(keep){ const el=document.getElementById(keep.id); if(el){ if(keep.val!=null&&"value" in el) el.value=keep.val; el.focus({preventScroll:true}); try{ el.setSelectionRange(keep.s,keep.e); }catch(_){} } }
 }
 const empty = (title, body, action) => `<div class="empty"><b>${esc(title)}</b>${esc(body)}${action?`<div style="margin-top:10px">${action}</div>`:""}</div>`;
 const addBtn = (col, label, preset) => readOnly ? "" : `<button class="btn primary" data-add="${col}" ${preset?`data-preset='${esc(JSON.stringify(preset))}'`:""}>${esc(label)}</button>`;
 
 function vToday(){
-  const t=todayISO(), dn=todayDay();
-  const wk=data.workouts.filter(w=>w.day===dn).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
-  const tints=upcomingTints().slice(0,5);
-  const pAll=peopleDue().map(p=>({p,d:due(p)})).sort((a,b)=>a.d.days-b.d.days), ppl=pAll.slice(0,6);
-  const R=rx(), overdue=R.openInv.filter(m=>invState(m)==="Overdue");
-  const mk=monthKey(t);
+  const t=todayISO(), dn=todayDay(), now=new Date(), hr=now.getHours();
+  const greet=hr<5?"Good evening":hr<12?"Good morning":hr<17?"Good afternoon":"Good evening";
+  const R=rx(), mk=monthKey(t), overdue=R.openInv.filter(m=>invState(m)==="Overdue");
   const spent=data.money.filter(m=>m.kind==="Expense"&&monthKey(m.date)===mk).reduce((s,m)=>s+Number(m.amount||0),0);
-  // paid invoices count in the month they were PAID (not issued); plus paid jobs never invoiced, plus income entries
   const inc=collectedIn(mk)+data.money.filter(m=>m.kind==="Income"&&monthKey(m.date)===mk).reduce((s,m)=>s+Number(m.amount||0),0);
-  const owedSub=[R.sent?`${money(R.sent)} invoiced`:"",R.drafts?`${money(R.drafts)} in drafts`:"",R.notInvoiced?`${money(R.notInvoiced)} not invoiced`:""].filter(Boolean).join(" · ");
-  const unpaidItems=[...R.items].sort((a,b)=>({Overdue:0}[a.state]??1)-({Overdue:0}[b.state]??1)||(a.due||a.date||"").localeCompare(b.due||b.date||""));
   const limit=data.budgets.reduce((s,b)=>s+Number(b.limit||0),0);
-  const hot=data.ideas.filter(i=>i.stage!=="Parked").sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,3);
-  return `
-  <div class="stats">
-    <div class="stat"><div class="k">Owed to you</div><div class="v num" style="${overdue.length?"color:var(--bad)":""}">${money(R.total)}</div>${owedSub?`<div class="ss">${esc(owedSub)}</div>`:""}</div>
-    <div class="stat"><div class="k">In this month</div><div class="v num">${money(inc)}</div></div>
-    <div class="stat"><div class="k">Spent this month</div><div class="v num">${money(spent)}${limit?`<span style="font:500 13px var(--f-mono);color:var(--muted)"> / ${money(limit)}</span>`:""}</div></div>
-    <div class="stat"><div class="k">Check-ins due</div><div class="v num">${pAll.length}</div><div class="ss">of ${data.people.length} ${data.people.length===1?"person":"people"}</div></div>
+  const owedSub=[R.sent?`${money(R.sent)} invoiced`:"",R.drafts?`${money(R.drafts)} in drafts`:"",R.notInvoiced?`${money(R.notInvoiced)} not invoiced`:""].filter(Boolean).join(" · ");
+  const monthName=now.toLocaleDateString("en-US",{month:"long"});
+  // schedule
+  const blocks=dayBlocks(dn), nm=nowMin(), cur=blocks.find(isNow), next=blocks.find(b=>toMin(b.start)>nm), rest=blocks.filter(b=>toMin(b.end)>nm);
+  const dur=m=>{ const h=Math.floor(m/60), mm=m%60; return h?`${h}h${mm?" "+mm+"m":""}`:`${mm}m`; };
+  let nowHtml;
+  if(cur){ const st=toMin(cur.start), en=toMin(cur.end), pct=Math.max(2,Math.min(100,(nm-st)/(en-st)*100));
+    nowHtml=`<div class="nk"><span class="live"></span>Now · ${fmtT(cur.start)}–${fmtT(cur.end)}</div><div class="nt" data-edit="blocks" data-id="${cur.id}" tabindex="0">${esc(cur.focus)}</div><div class="bar"><i style="width:${pct}%"></i></div><div class="nm">${dur(en-nm)} left${cur.goal&&goalTitle(cur.goal)?` · → ${esc(goalTitle(cur.goal))}`:""}${next&&next!==cur?` · Up next ${fmtT(next.start)} ${esc(next.focus)}`:""}</div>`; }
+  else if(next){ nowHtml=`<div class="nk" style="color:var(--muted)">${svg("clock")}Up next · in ${dur(toMin(next.start)-nm)}</div><div class="nt" data-edit="blocks" data-id="${next.id}" tabindex="0">${dot(next.area)}${esc(next.focus)}</div><div class="nm">${fmtT(next.start)}–${fmtT(next.end)}${next.goal&&goalTitle(next.goal)?` · → ${esc(goalTitle(next.goal))}`:""}</div>`; }
+  else nowHtml=`<div class="nk" style="color:var(--muted)">${svg("clock")}Schedule</div><div class="nt">${blocks.length?"That's a wrap for today":"Nothing blocked today"}</div><div class="nm">${blocks.length?`${blocks.length} block${blocks.length===1?"":"s"} done. Plan tomorrow in <a href="#plan">Plan</a>.`:`Build your week in <a href="#plan">Plan</a>.`}</div>`;
+  if(blocks.length) nowHtml+=`<details><summary>Today's schedule · ${blocks.length}</summary><div class="mini" style="margin-top:6px">${blocks.map(blockRow).join("")}</div></details>`;
+  // tasks, people, money, training, jobs, ideas
+  const dueT=sortTasks(data.tasks.filter(x=>x.status!=="Done"&&x.due&&x.due<=t)).slice(0,6), hi=data.tasks.filter(x=>x.status!=="Done"&&!x.due&&x.priority==="High").slice(0,3), tl=[...dueT,...hi];
+  const pAll=peopleDue().map(p=>({p,d:due(p)})).sort((a,b)=>a.d.days-b.d.days);
+  const unpaid=[...R.items].sort((a,b)=>({Overdue:0}[a.state]??1)-({Overdue:0}[b.state]??1)||(a.due||a.date||"").localeCompare(b.due||b.date||""));
+  const wk=data.workouts.filter(w=>w.day===dn).sort((a,b)=>(a.time||"").localeCompare(b.time||"")), tw=trainingWeek();
+  const dots=DAYS.map((d,i)=>{ const ws=data.workouts.filter(w=>w.day===d&&w.type!=="Rest"), date=tw.wd[i], done=ws.some(w=>(w.doneDates||[]).includes(date));
+    const cls=done?"done":ws.length?(date<t?"missed":"plan"):""; return `<span class="${d===dn?"td":""}" title="${esc(d)}"><i class="${cls}"></i>${d[0]}</span>`; }).join("");
+  const tints=upcomingTints().slice(0,4), hot=data.ideas.filter(i=>i.stage!=="Parked").sort((a,b)=>(b.score||0)-(a.score||0)).slice(0,3);
+  const tile=(ic,title,link,body,extra)=>`<section class="tile"${extra||""}><div class="tile-h"><h3><span class="tic" style="background:${HUE[ic]}">${svg({auto:"jobs",res:"house",com:"building"}[ic]||ic)}</span>${title}</h3>${link||""}</div>${body}</section>`;
+  const fabActs=readOnly?"":`<div class="fab-acts" hidden>${addBtn("tasks","New task",{status:"To do",priority:"Medium",due:t})}${addBtn("tints","Book a job",{division:"Automotive",status:"Booked",service:"Auto tint",when:t+"T09:00"})}<button class="btn" data-newinv>New invoice</button>${addBtn("workouts","Add workout",{day:dn})}${addBtn("people","Add person",{cadence:"30",last:t})}${addBtn("ideas","Capture idea",{stage:"Raw",score:"3"})}</div>`;
+  return `${fabActs}
+  <div class="greet"><div class="gd">${esc(now.toLocaleDateString("en-US",{weekday:"long",month:"long",day:"numeric"}))}</div><h2>${greet}, Sean</h2></div>
+  <div class="tgrid top">
+    <a class="hero" href="#invoices" aria-label="Money: ${esc(money(R.total))} owed to you">
+      <div class="hk">Owed to you ${overdue.length?`<span class="hpill">${overdue.length} overdue</span>`:R.total?"":`<span class="hpill ok">All paid</span>`}</div>
+      <div class="hv">${money(R.total)}</div>
+      <div class="hs">${esc(owedSub||"Nothing outstanding")}${R.openInv.length?` · ${R.openInv.length} open invoice${R.openInv.length===1?"":"s"}`:""}</div>
+      <div class="hrow"><div class="hcell"><small>Collected · ${esc(monthName)}</small><b>${money(inc)}</b></div><div class="hcell"><small>Spent${limit?` of ${money(limit)}`:""}</small><b>${money(spent)}</b></div></div>
+    </a>
+    <section class="nowcard">${nowHtml}</section>
   </div>
-  <div class="grid">
-    <section class="panel"><h3>Schedule · ${dn}</h3><div class="mini">${dayBlocks(dn).length?dayBlocks(dn).map(blockRow).join(""):empty("Nothing blocked today","Build your week in Plan.")}</div></section>
-    <section class="panel"><h3>Tasks due</h3>${quickAdd()}<div class="mini">${(()=>{const xs=sortTasks(data.tasks.filter(x=>x.status!=="Done"&&x.due&&x.due<=t)).slice(0,6);const nd=data.tasks.filter(x=>x.status!=="Done"&&!x.due&&x.priority==="High").slice(0,3);const all=[...xs,...nd];return all.length?all.map(taskRow).join(""):empty("Nothing due today","Add tasks with a due date in Tasks.");})()}</div></section>
-    <section class="panel"><h3>Training · ${dn}</h3><div class="mini">${wk.length?wk.map(w=>wkRow(w,t)).join(""):empty("Nothing scheduled today","Add your weekly split in Training.")}</div></section>
-    <section class="panel"><h3>Upcoming jobs</h3><div class="mini">${tints.length?tints.map(tintRow).join(""):empty("No upcoming jobs","Book one in Automotive, Residential or Commercial.",readOnly?"":`<button class="btn sm" data-add="tints" data-preset='${esc(JSON.stringify({division:"Automotive",status:"Booked",service:"Auto tint",when:todayISO()+"T09:00"}))}'>Book an auto job</button>`)}</div></section>
-    <section class="panel"><h3>Reach out</h3><div class="mini">${ppl.length?ppl.map(x=>personRow(x.p)).join(""):empty("Everyone's current","People appear here when a check-in is due.")}</div></section>
-    <section class="panel"><h3>Unpaid · <span class="num">${money(R.total)}</span>${overdue.length?` · <span style="color:var(--bad)">${overdue.length} overdue</span>`:""}</h3><div class="mini">${unpaidItems.length?unpaidItems.slice(0,8).map(it=>it.kind==="inv"?moneyRow(it.inv):tintRow(it.jobs[0])).join("")+(unpaidItems.length>8?`<div class="row" style="cursor:default"><a href="#invoices" class="s" style="color:var(--accent)">${unpaidItems.length-8} more in Invoices →</a></div>`:""):empty("Nothing outstanding","Finished tint jobs and sent invoices show up here until paid.")}</div></section>
-    <section class="panel"><h3>Top ideas</h3><div class="mini">${hot.length?hot.map(ideaRow).join(""):empty("No ideas yet","Capture them in Ideas.")}</div></section>
+  <div class="tcols">
+    ${tile("tasks","Tasks due",`<a href="#tasks">All</a>`,`${quickAdd()}<div class="mini">${tl.length?tl.map(taskRow).join(""):empty("You're all caught up","Nothing due today. Add one above.")}</div>`)}
+    ${tile("invoices",`Unpaid <span class="num" style="color:var(--muted);font-weight:600">${money(R.total)}</span>`,`<a href="#invoices">Invoices</a>`,`<div class="mini">${unpaid.length?unpaid.slice(0,5).map(it=>it.kind==="inv"?moneyRow(it.inv):tintRow(it.jobs[0])).join("")+(unpaid.length>5?`<div class="row" style="cursor:default"><a href="#invoices" class="s" style="color:var(--accent)">${unpaid.length-5} more →</a></div>`:""):empty("Nothing outstanding","Finished jobs and sent invoices show here until they're paid.")}</div>`)}
+    ${tile("people","Check-ins",`<a href="#people">${pAll.length?pAll.length+" due":"People"}</a>`,`<div class="mini">${pAll.length?pAll.slice(0,5).map(x=>personRow(x.p)).join(""):empty("Everyone's current","People show up here when it's time to reach out.")}</div>`)}
+    ${tile("training","Training",`<a href="#training">${tw.done}/${tw.planned} this week</a>`,`<div class="wdots">${dots}</div><div class="mini">${wk.length?wk.map(w=>wkRow(w,t)).join(""):empty("Rest day","Nothing scheduled today.")}</div>`)}
+    ${tile("auto","Upcoming jobs",`<a href="#${lastDiv()}">Jobs</a>`,`<div class="mini">${tints.length?tints.map(tintRow).join(""):empty("No jobs booked ahead",readOnly?"":"Tap + to book one.")}</div>`)}
+    ${tile("ideas","Top ideas",`<a href="#ideas">All</a>`,`<div class="mini">${hot.length?hot.map(ideaRow).join(""):empty("No ideas yet","Capture them in Ideas.")}</div>`)}
   </div>`;
 }
 
@@ -365,7 +431,7 @@ function vPlan(){
   const warn=[];
   if(active.length>3) warn.push(`${active.length} goals are Active. Past 3 at once, most stall. Move some to Next.`);
   unblocked.forEach(g=>warn.push(`"${g.title}" is Active but has no time blocked on the schedule.`));
-  return `<div class="sec-head"><h2>Goals &amp; weekly plan</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${addBtn("blocks","Add time block",{day:dn,area:"PerformCore"})}${addBtn("goals","Add goal",{status:"Next",area:"PerformCore"})}</div></div>
+  return `<div class="sec-head"><h2>Plan</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${addBtn("blocks","Add time block",{day:dn,area:"PerformCore"})}${addBtn("goals","Add goal",{status:"Next",area:"PerformCore"})}</div></div>
   ${warn.length?`<div class="panel" style="margin-bottom:16px;border-color:var(--sun);background:var(--sun-soft)">${warn.map(w=>`<div style="font-size:14px;color:var(--ink)">${esc(w)}</div>`).join("")}</div>`:""}
   ${goals.length?`<div class="cards" style="margin-bottom:24px">${goals.map(goalCard).join("")}</div>`:`<div class="list" style="margin-bottom:24px">${empty("No goals yet","Add 2–3 Active goals with a measurable target, then block time for each on the schedule below.")}</div>`}
   <div class="sec-head" style="margin-top:8px"><h2>The week</h2><span class="chip num">${totalH.toFixed(1)} h scheduled</span></div>
@@ -428,7 +494,7 @@ function wkRow(w,t){
 function vTraining(){
   const t=todayISO(), dn=todayDay();
   const tw=trainingWeek(), weekDates=tw.wd;
-  return `<div class="sec-head"><h2>Weekly training</h2><div style="display:flex;gap:10px;align-items:center"><span class="chip ${tw.planned&&tw.done>=tw.planned?"g":"a"} num">${tw.done}/${tw.planned} done this week</span>${addBtn("workouts","Add workout",{day:dn})}</div></div>
+  return `<div class="sec-head"><h2>Training</h2><div style="display:flex;gap:10px;align-items:center"><span class="chip ${tw.planned&&tw.done>=tw.planned?"g":"a"} num">${tw.done}/${tw.planned} done this week</span>${addBtn("workouts","Add workout",{day:dn})}</div></div>
   <div class="week">${DAYS.map((d,i)=>{
     const ws=data.workouts.filter(w=>w.day===d).sort((a,b)=>(a.time||"").localeCompare(b.time||""));
     const date=weekDates[i];
@@ -570,8 +636,10 @@ function openAccount(id){
 function vDiv(div){
   const t=todayISO(), D=DIV[div], flat=div!=="Automotive", K="v_"+div, F="f_"+div;
   const view=ui[K]||"Jobs";
-  const head=`<div class="sec-head"><h2>${esc(div)}</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${addBtn("accounts","Add account",{division:div,type:D.acctTypes[0],terms:flat?15:7})}${flat&&!readOnly?`<button class="btn" data-films>Film prices</button>`:""}${addBtn(D.schema,"Book job",{division:div,status:"Booked",service:D.services[0]})}</div></div>
-  <div class="filters" style="margin-bottom:16px">${["Jobs","Accounts"].map(x=>`<button data-filter="${K}" data-v="${x}" aria-pressed="${x===view}">${x}</button>`).join("")}</div>`;
+  const DSEG=[["auto","Automotive","Automotive"],["res","Residential","Residential"],["com","Commercial","Commercial"]];
+  const head=`<div class="sec-head"><h2>Jobs</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${addBtn("accounts","Add account",{division:div,type:D.acctTypes[0],terms:flat?15:7})}${flat&&!readOnly?`<button class="btn" data-films>Film prices</button>`:""}${addBtn(D.schema,"Book job",{division:div,status:"Booked",service:D.services[0]})}</div></div>
+  <nav class="seg" aria-label="Division">${DSEG.map(([h,l,d])=>`<a href="#${h}" ${d===div?'aria-current="page"':""}>${l}</a>`).join("")}</nav>
+  <div class="seg sm" role="group" aria-label="View">${["Jobs","Accounts"].map(x=>`<button data-filter="${K}" data-v="${x}" aria-pressed="${x===view}">${x}</button>`).join("")}</div>`;
   const jobsAll=data.tints.filter(a=>divOf(a)===div);
   if(view==="Accounts"){
     const accts=data.accounts.filter(ac=>divOf(ac)===div).map(ac=>({ac,s:acctStats(ac)})).sort((x,y)=>y.s.openTot-x.s.openTot||(x.ac.name||"").localeCompare(y.ac.name||""));
@@ -634,7 +702,8 @@ function vMoney(){
   const spentBy={}; data.money.filter(m=>m.kind==="Expense"&&monthKey(m.date)===mk).forEach(m=>{const c=(m.category||"Uncategorized").trim();spentBy[c.toLowerCase()]=(spentBy[c.toLowerCase()]||0)+Number(m.amount||0);});
   const budgets=[...data.budgets].sort((a,b)=>(a.category||"").localeCompare(b.category||""));
   const monthName=new Date().toLocaleDateString("en-US",{month:"long"});
-  return `<div class="sec-head"><h2>Invoices &amp; budget</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${readOnly?"":`<button class="btn" data-settings>Invoice settings</button><button class="btn" data-newinv>New invoice</button>`}${addBtn("budgets","Set budget")}${addBtn("money","Add entry",{kind:"Invoice",status:"Draft",date:todayISO(),due:addDays(todayISO(),Number(invSettings().terms)||7)})}</div></div>
+  return `<div class="sec-head"><h2>Money</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${readOnly?"":`<button class="btn" data-settings>Invoice settings</button><button class="btn" data-newinv>New invoice</button>`}${addBtn("budgets","Set budget")}${addBtn("money","Add entry",{kind:"Invoice",status:"Draft",date:todayISO(),due:addDays(todayISO(),Number(invSettings().terms)||7)})}</div></div>
+  <nav class="seg" aria-label="Money">${[["invoices","Invoices"],["money","Budget & ledger"]].map(([h,l])=>`<a href="#${h}" ${route()===h?'aria-current="page"':""}>${esc(l)}</a>`).join("")}</nav>
   <div class="grid" style="grid-template-columns:repeat(auto-fit,minmax(min(100%,320px),1fr));align-items:start">
     <section class="panel"><h3>${monthName} budget</h3>${budgets.length?budgets.map(b=>{const s=spentBy[(b.category||"").trim().toLowerCase()]||0,l=Number(b.limit||0),p=l?Math.min(100,s/l*100):0;return `<div class="brow" data-edit="budgets" data-id="${b.id}" tabindex="0"><div class="l"><span>${esc(b.category)}</span><span class="num">${money(s)} / ${money(l)}</span></div><div class="bar"><i class="${s>l?"over":""}" style="width:${p}%"></i></div></div>`;}).join(""):empty("No budgets set","Add a category and monthly limit. Expenses with the same category count against it.")}</section>
     <section style="min-width:0"><div class="filters">${["All","Invoices","Expenses","Income"].map(x=>`<button data-filter="moneyFilter" data-v="${x}" aria-pressed="${x===f}">${x}</button>`).join("")}</div>
@@ -657,6 +726,36 @@ function vDesigns(){
 }
 function hydrateImages(){ document.querySelectorAll("img[data-asset]").forEach(img=>{ const id=img.dataset.asset; if(assets&&assets.url) assets.url(id).then(u=>{ if(u) img.src=u; else img.replaceWith(Object.assign(document.createElement("span"),{textContent:"Image not on this device"})); }); else img.src="/_blob/"+id; }); }
 
+
+// ---------- More ----------
+function vMore(){
+  const C=counts(), R=C.R, tw=C.tw, mk=monthKey(todayISO());
+  const active=data.goals.filter(g=>g.status==="Active").length, hrs=data.blocks.reduce((s,b)=>s+blockMins(b),0)/60;
+  const divSub=d=>{ const un=R.items.filter(i=>i.div===d).reduce((s,i)=>s+i.amount,0), up=C.up.filter(a=>divOf(a)===d).length; return [up?`${up} upcoming`:"",un?`${money(un)} unpaid`:"",!up&&!un?`${data.tints.filter(a=>divOf(a)===d).length} jobs`:""].filter(Boolean).join(" · "); };
+  const meta=window.LHQ?LHQ.meta():{}, lb=meta.lastBackupAt?Math.floor((Date.now()-new Date(meta.lastBackupAt))/864e5):null;
+  const row=(href,ic,label,sub,c)=>`${href.startsWith("#")?`<a class="mrow" href="${href}">`:`<button class="mrow" ${href}>`}<span class="mic" style="background:${HUE[ic]||HUE.today}">${svg({auto:"jobs",res:"house",com:"building"}[ic]||ic)}</span><span class="ml"><b>${label}</b><small>${esc(sub)}</small></span>${badge(c)}${svg("chev","chev")}${href.startsWith("#")?"</a>":"</button>"}`;
+  return `<div class="sec-head"><h2>More</h2></div>
+  <h3>Life</h3><div class="mlist">
+    ${row("#plan","plan","Plan",`${active} active goal${active===1?"":"s"} · ${hrs.toFixed(hrs%1?1:0)} h a week`)}
+    ${row("#training","training","Training",`${tw.done} of ${tw.planned} done this week`,C.training)}
+    ${row("#people","people","People",`${C.pd.length} due · ${data.people.length} total`,C.people)}
+    ${row("#ideas","ideas","Ideas",`${data.ideas.length} idea${data.ideas.length===1?"":"s"}`)}
+    ${row("#designs","designs","Designs",`${data.designs.length} saved`)}
+  </div>
+  <h3>PerformCore</h3><div class="mlist">
+    ${row("#auto","auto","Automotive",divSub("Automotive"),C.auto)}
+    ${row("#res","res","Residential",divSub("Residential"),C.res)}
+    ${row("#com","com","Commercial",divSub("Commercial"),C.com)}
+    ${row("#invoices","invoices","Invoices",`${money(R.sent)} open · ${money(collectedIn(mk))} collected this month`,C.invoices)}
+    ${row("#money","ledger","Budget & ledger",`${data.budgets.length} budget${data.budgets.length===1?"":"s"} · ${data.money.filter(m=>m.kind!=="Invoice").length} entries`)}
+    ${readOnly?"":row("data-films","film","Film prices",`${data.films.length} film${data.films.length===1?"":"s"} · price per sq ft`)}
+    ${readOnly?"":row("data-settings","settings","Invoice settings","Business details and payment instructions")}
+  </div>
+  <h3>Your data</h3><div class="mlist">
+    ${row("data-backup","backup","Backup &amp; shortcuts",lb==null?"No backup yet. Everything lives on this phone.":`Last backup ${lb===0?"today":lb+" day"+(lb===1?"":"s")+" ago"}`,lb==null||lb>=7?["!",true,"backup due"]:null)}
+  </div>
+  <p style="text-align:center;color:var(--faint);font-size:12.5px;margin:18px 0 0">Life HQ · saved on this device${window.LHQ?" ("+esc(LHQ.mode)+")":""}</p>`;
+}
 
 // ---------- invoices tab ----------
 const invoicesAll=()=>data.money.filter(m=>m.kind==="Invoice");
@@ -683,7 +782,8 @@ function vInvoices(){
   const all=invoicesAll(), open=rx().openInv, over=open.filter(m=>invState(m)==="Overdue"), drafts=all.filter(m=>invState(m)==="Draft");
   const issues=dataIssues();
   const mk=monthKey(todayISO()), paidMonth=all.filter(m=>invState(m)==="Paid"&&monthKey(m.paidDate||m.date)===mk);
-  return `<div class="sec-head"><h2>Invoices</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${readOnly?"":`<button class="btn" data-settings>Invoice settings</button><button class="btn primary" data-newinv>New invoice</button>`}</div></div>
+  return `<div class="sec-head"><h2>Money</h2><div style="display:flex;gap:8px;flex-wrap:wrap">${readOnly?"":`<button class="btn" data-settings>Invoice settings</button><button class="btn primary" data-newinv>New invoice</button>`}</div></div>
+  <nav class="seg" aria-label="Money">${[["invoices","Invoices"],["money","Budget & ledger"]].map(([h,l])=>`<a href="#${h}" ${route()===h?'aria-current="page"':""}>${esc(l)}</a>`).join("")}</nav>
   <div class="stats"><div class="stat"><div class="k">Open</div><div class="v num" style="${open.length?"color:var(--sun)":""}">${money2(open.reduce((s,m)=>s+Number(m.amount||0),0))}<span style="font:500 13px var(--f-mono);color:var(--muted)"> · ${open.length}</span></div></div><div class="stat"><div class="k">Overdue</div><div class="v num" style="${over.length?"color:var(--bad)":""}">${money2(over.reduce((s,m)=>s+Number(m.amount||0),0))}<span style="font:500 13px var(--f-mono);color:var(--muted)"> · ${over.length}</span></div></div><div class="stat"><div class="k">Paid this month</div><div class="v num">${money2(paidMonth.reduce((s,m)=>s+Number(m.amount||0),0))}</div></div></div>
   ${(()=>{ const fixes=issues.filter(x=>x.sev!=="info"), notes=issues.filter(x=>x.sev==="info");
     const fixRow=x=>`<div class="brow" style="cursor:default"><div class="l"><span style="font-size:14px">⚠ ${esc(x.msg)}</span>${!readOnly&&x.fix?`<button class="btn sm" data-fix="${x.fix}" data-id="${esc(x.id)}">${x.fix==="jobpaid"?"Mark job paid":x.fix==="invpaid"?"Mark invoice paid":"Unlink"}</button>`:""}</div></div>`;
@@ -1059,7 +1159,7 @@ async function saveFile(name, blob){
 function openBackup(){
   modalRefresh=null;
   const counts=COLS.map(c=>[c,data[c].length]).filter(x=>x[1]);
-  const keys=[["1–9, 0","Jump to a tab (1 Today … 9 Invoices, 0 Money)"],["[  ]","Previous / next tab"],["t","Quick-add a task"],["n","New item on this tab"],["/","Search invoices"],["Esc","Close a sheet"],["?","This panel"]];
+  const keys=[["1–9, 0","Jump to a tab (1 Today … 9 Invoices, 0 Money)"],["[  ]","Previous / next tab"],["t","Quick-add a task"],["n","New item on this tab"],["/","Search invoices"],["Esc","Close a sheet"],["?","This panel"],["Phone","Swipe a row right to complete it or mark it paid · pull a sheet down to close it · tap + to add"]];
   $("#modal-root").innerHTML=`<div class="ov" id="ov"><div class="sheet" id="bsheet" role="dialog" aria-label="Backup and shortcuts">
     <h2>Backup &amp; shortcuts</h2>
     <p style="font-size:14px;color:var(--muted);margin:0 0 10px">Download everything, design images included, as one JSON file, or bring a backup back in (a backup from the Claude version works too). Importing adds and updates entries by their ID. It never deletes anything. Your data lives only on this device, so download a backup every week or so and keep it in Files or iCloud Drive.</p>
@@ -1088,6 +1188,40 @@ function openBackup(){
       $("#b-imp").innerHTML=`<div class="panel" style="margin-top:12px;font-size:14px">${n} entr${n===1?"y":"ies"} imported.${bad?` ${bad} couldn't be saved (storage may be full).`:""}</div>`; fi.value=""; };
   };
 }
+// ----- floating + : one action opens directly, several open an iOS-style action sheet -----
+const haptic=()=>{ try{ if(navigator.vibrate) navigator.vibrate(8); }catch(_){} };
+// Today has its own list; other screens use their header buttons, main action first
+const fabActions=()=>{ const fa=[...document.querySelectorAll("#view .fab-acts .btn")]; return fa.length?fa:[...document.querySelectorAll("#view .sec-head .btn")].reverse(); };
+function updateFab(){ const f=$("#fab"); if(f) f.hidden=readOnly||!fabActions().length; }
+function openActions(acts){
+  modalRefresh=null;
+  const list=acts;
+  $("#modal-root").innerHTML=`<div class="ov" id="ov"><div class="sheet actsheet" role="dialog" aria-label="Add"><div class="as-list"><div class="as-title">Add to ${esc(TITLE[route()]||"Life HQ")}</div>${list.map((b,i)=>`<button class="as-item" data-as="${i}">${esc(b.textContent.trim())}</button>`).join("")}</div><button class="as-item as-cancel" data-ascancel>Cancel</button></div></div>`;
+  const ov=$("#ov"); ov.addEventListener("click",e=>{ const it=e.target.closest("[data-as]"); if(it){ e.stopPropagation(); const b=list[+it.dataset.as]; closeModal(); b.click(); return; } if(e.target===ov||e.target.closest("[data-ascancel]")){ e.stopPropagation(); closeModal(); } });
+}
+$("#fab").addEventListener("click",()=>{ haptic(); const acts=fabActions(); if(!acts.length) return; if(acts.length===1) acts[0].click(); else openActions(acts); });
+document.addEventListener("click",e=>{ if(e.target.closest(".check,[data-paid],[data-invpaid],[data-checkin],[data-markdone]")) haptic(); },true);
+
+// ----- swipe a row right to run its main action (complete, mark paid, checked in) -----
+let sw=null;
+const SWIPE=[["[data-task]",b=>b.classList.contains("on")?"Reopen":"Done"],["[data-done]",b=>b.classList.contains("on")?"Undo":"Done"],["[data-markdone]",()=>"Done"],["[data-paid]",()=>"Paid"],["[data-invpaid]",()=>"Paid"],["[data-checkin]",()=>"Checked in"]];
+document.addEventListener("touchstart",e=>{ sw=null; if(e.touches.length!==1||readOnly) return; const row=e.target.closest("#view .row"); if(!row||e.target.closest("input,textarea,select")) return;
+  for(const [sel,lab] of SWIPE){ const b=row.querySelector(sel); if(b){ sw={row,b,lab:lab(b),x:e.touches[0].clientX,y:e.touches[0].clientY,dx:0,on:false}; return; } } },{passive:true});
+document.addEventListener("touchmove",e=>{ if(!sw) return; const dx=e.touches[0].clientX-sw.x, dy=e.touches[0].clientY-sw.y;
+  if(!sw.on){ if(Math.abs(dy)>10&&Math.abs(dy)>Math.abs(dx)){ sw=null; return; } if(dx>14&&dx>Math.abs(dy)*1.6){ sw.on=true; sw.row.dataset.swipe=sw.lab; sw.row.classList.add("swiping"); } else return; }
+  sw.dx=Math.max(0,Math.min(dx,150)); sw.row.style.transform=`translateX(${sw.dx}px)`; const armed=sw.dx>88; if(armed!==sw.row.classList.contains("armed")){ sw.row.classList.toggle("armed",armed); if(armed) haptic(); } },{passive:true});
+document.addEventListener("touchend",()=>{ const s=sw; sw=null; if(!s||!s.on) return; s.row.style.transform=""; s.row.classList.remove("swiping","armed"); if(s.dx>88) setTimeout(()=>s.b.click(),60); },{passive:true});
+
+// ----- pull a bottom sheet down to dismiss it -----
+let sd=null;
+document.addEventListener("touchstart",e=>{ sd=null; const sh=e.target.closest("#modal-root .sheet"); if(!sh||e.touches.length!==1||e.target.closest("input,textarea,select,.week,.filters")) return; if(sh.scrollTop>0) return; sd={sh,y:e.touches[0].clientY,dy:0}; },{passive:true});
+document.addEventListener("touchmove",e=>{ if(!sd) return; const dy=e.touches[0].clientY-sd.y; if(dy<=0||sd.sh.scrollTop>0){ if(sd.dy){ sd.sh.style.transform=""; } sd.dy=0; return; } sd.dy=dy; sd.sh.classList.add("dragging"); sd.sh.style.transform=`translateY(${dy}px)`; },{passive:true});
+document.addEventListener("touchend",()=>{ const d=sd; sd=null; if(!d||!d.dy) return; d.sh.classList.remove("dragging"); if(d.dy>120){ d.sh.style.transition="transform .2s ease-in"; d.sh.style.transform="translateY(110%)"; setTimeout(closeModal,190); } else { d.sh.style.transition="transform .25s cubic-bezier(.2,.8,.2,1)"; d.sh.style.transform=""; setTimeout(()=>{ if(d.sh) d.sh.style.transition=""; },260); } },{passive:true});
+
+// ----- large title collapses into the bar as you scroll -----
+const onScroll=()=>{ const tb=$("#topbar"); if(tb) tb.classList.toggle("solid",window.scrollY>36); };
+window.addEventListener("scroll",onScroll,{passive:true}); onScroll();
+
 // keep the page behind a sheet from scrolling (iPhone Safari)
 new MutationObserver(()=>{ document.documentElement.style.overflow=$("#modal-root").innerHTML?"hidden":""; }).observe($("#modal-root"),{childList:true});
 

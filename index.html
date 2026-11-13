@@ -6,45 +6,57 @@
 <title>Life HQ</title>
 <meta name="description" content="Sean's Life HQ: tint jobs, invoices, money, goals, tasks, training and people, on your phone.">
 <link rel="manifest" href="manifest.webmanifest">
-<meta name="theme-color" content="#EDF0F1" media="(prefers-color-scheme: light)">
-<meta name="theme-color" content="#0F171C" media="(prefers-color-scheme: dark)">
+<meta name="theme-color" content="#F2F4F7" media="(prefers-color-scheme: light)">
+<meta name="theme-color" content="#05080C" media="(prefers-color-scheme: dark)">
 <meta name="apple-mobile-web-app-capable" content="yes">
 <meta name="mobile-web-app-capable" content="yes">
 <meta name="apple-mobile-web-app-title" content="Life HQ">
 <meta name="apple-mobile-web-app-status-bar-style" content="default">
 <meta name="format-detection" content="telephone=no">
+<meta name="color-scheme" content="light dark">
 <link rel="apple-touch-icon" href="icons/apple-touch-icon.png">
 <link rel="icon" type="image/png" sizes="32x32" href="icons/favicon-32.png">
 <link rel="icon" type="image/png" sizes="192x192" href="icons/icon-192.png">
 <link rel="preload" href="fonts/BricolageGrotesque-var.woff2" as="font" type="font/woff2" crossorigin>
-<link rel="preload" href="fonts/IBMPlexSans-var.woff2" as="font" type="font/woff2" crossorigin>
 <link rel="stylesheet" href="fonts/fonts.css">
-<link rel="stylesheet" href="app.css">
+<link rel="stylesheet" href="app-v2.css">
 <style>[hidden]:not([hidden=until-found i]){display:none!important}</style>
 </head>
 <body>
-<header>
-  <div class="wrap">
-    <div class="top"><h1>Life HQ</h1><span style="display:flex;gap:10px;align-items:center"><span class="date" id="today-label"></span><button class="btn sm" data-backup aria-label="Backup and keyboard shortcuts" title="Backup &amp; shortcuts (?)">Backup</button></span></div>
-    <nav id="nav" aria-label="Sections"></nav>
+<div class="app">
+  <aside class="side" aria-label="Sections">
+    <div class="brand"><span class="mark" aria-hidden="true">HQ</span><span><b>Life HQ</b><small id="today-label"></small></span></div>
+    <nav id="sidenav"></nav>
+    <div class="side-foot"><button class="iconbtn" data-backup><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8v10.6M7.6 10l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-2.6"/></svg>Backup &amp; shortcuts</button><small>Saved on this device · press ? for shortcuts</small></div>
+  </aside>
+  <div class="content">
+    <header class="topbar" id="topbar">
+      <span class="tb-title" id="tb-title" aria-hidden="true"></span>
+      <button class="iconbtn" data-backup aria-label="Backup and shortcuts" title="Backup"><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3.8v10.6M7.6 10l4.4 4.4 4.4-4.4"/><path d="M4.4 15.6v2.6a2 2 0 0 0 2 2h11.2a2 2 0 0 0 2-2v-2.6"/></svg>Backup</button>
+    </header>
+    <main class="wrap">
+      <div id="backup-nudge" role="status" hidden><span></span><button class="btn sm primary" data-backup>Back up now</button></div>
+      <div id="status" class="status" role="status"></div>
+      <div id="view"></div>
+    </main>
   </div>
-</header>
-<main class="wrap">
-  <div id="backup-nudge" role="status" hidden><span></span><button class="btn sm primary" data-backup>Back up now</button></div>
-  <div id="status" class="status" role="status"></div>
-  <div id="view"></div>
-</main>
+  <nav class="tabbar" id="tabbar" aria-label="Sections"></nav>
+  <button class="fab" id="fab" aria-label="Add" hidden><svg class="ic" viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg></button>
+</div>
 <div id="modal-root"></div>
 <div id="welcome" hidden></div>
 <noscript><p style="padding:20px">Life HQ needs JavaScript turned on.</p></noscript>
 <script src="vendor/jspdf.umd.min.js" defer></script>
 <script src="store.js"></script>
-<script src="app.js" defer></script>
+<script src="app-v2.js" defer></script>
 <script>
 if("serviceWorker" in navigator && location.protocol!=="file:"){
   window.addEventListener("load",()=>{ navigator.serviceWorker.register("./sw.js").then(reg=>{
     // a new version was deployed: take it on the next launch without interrupting you
     reg.addEventListener("updatefound",()=>{ const w=reg.installing; if(w) w.addEventListener("statechange",()=>{ if(w.state==="installed"&&navigator.serviceWorker.controller) w.postMessage("skipWaiting"); }); });
+    // home-screen apps rarely navigate, so look for a new version on launch and whenever the app comes back to the front
+    const check=()=>reg.update().catch(()=>{});
+    check(); document.addEventListener("visibilitychange",()=>{ if(document.visibilityState==="visible") check(); });
   }).catch(e=>console.warn("Offline mode unavailable:",e&&e.message)); });
 }
 </script>

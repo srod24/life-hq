@@ -15,3 +15,10 @@ Use **Backup** regularly. The app reminds you after 7 days without one.
 
 ## Updating
 Change the files, bump `VERSION` in `sw.js`, and redeploy. The app picks up the new version on its next launch.
+
+## Version 2 (redesign)
+- New look: iPhone-style tab bar (Today, Tasks, Jobs, Money, More), sidebar on desktop, large titles, bottom-sheet forms, a + button, swipe right on a row to complete/mark paid, automatic dark mode.
+- Same data: storage code (store.js) is unchanged, so everything in IndexedDB "lifehq" carries over. No import needed.
+- Files renamed to app-v2.js / app-v2.css so the v1 offline cache can't serve old code with the new page.
+- sw.js VERSION is "lifehq-v2". Code files load network-first (cache when offline); fonts/icons/jsPDF are cache-first. Old lifehq-* caches are deleted.
+- To deploy: replace the repo contents with this folder (delete the old app.js/app.css and IBM Plex fonts), commit, push. Phones pick it up on the next launch.
