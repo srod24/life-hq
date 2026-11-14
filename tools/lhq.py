@@ -345,7 +345,7 @@ def add_signature(text, html=None):
     add = ""
     if not has_card_h: add += '<div style="margin-top:22px;">' + card_h + "</div>"
     if not has_notice(html + add):
-        add += ('<p style="font-family:Helvetica,Arial,sans-serif;font-size:10px;line-height:14px;font-style:italic;color:#8A918B;margin:18px 0 0 0;max-width:560px;">'
+        add += ('<p style="font-family:Helvetica,Arial,sans-serif;font-size:10px;line-height:14px;font-style:italic;color:#8A918B;margin:14px 0 0 0;max-width:480px;">'
                 + H.escape(notice) + "</p>")
     if add: html = html.replace("</body>", add + "</body>", 1) if "</body>" in html else html + add
     return text, html
