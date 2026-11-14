@@ -15,3 +15,9 @@ lhq email ...same args... --confirm <token>
 ```
 Bcc is not added automatically here (unlike email-invoice); pass `--bcc hello@performcoregroup.com` for Sean's copy.
 The send-invoice function accepts an optional attachment since Nov 13, 2026 (v3, commit c0c665d); with one it validates exactly as before.
+
+**Signature card (Sean, Nov 13, 2026):** `lhq email` and `lhq email-invoice` automatically end every email with Sean's signature
+card and confidentiality notice, in both the plain text and the HTML part (HTML is built from the text when no --html-file is
+given). Card/notice already present are not added twice. Sources: `email/signature-card.html`, `email/signature-card.txt`,
+`email/confidentiality-notice.txt`. While `email/confidentiality-notice.PLACEHOLDER` exists, the notice is Marketing's draft
+wording pending Sean's exact text (previews say so); replace the text and delete that file once he approves it.

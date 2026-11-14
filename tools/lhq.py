@@ -321,6 +321,34 @@ def fmt_long(s):
     if not s: return ""
     d = dt.date.fromisoformat(s[:10]); return f"{d:%b} {d.day}, {d.year}"
 def money2(x): return "${:,.2f}".format(float(x or 0))
+SIG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "email")
+def _sig(name): return open(os.path.join(SIG_DIR, name)).read().strip()
+def sig_placeholder(): return os.path.exists(os.path.join(SIG_DIR, "confidentiality-notice.PLACEHOLDER"))
+def add_signature(text, html=None):
+    """Every hello@ email ends with Sean's signature card + confidentiality notice (Sean, Nov 13, 2026).
+    Adds them to the plain text and the HTML part (HTML is built from the text if none was given). Skips anything already present."""
+    import html as H
+    card_t, card_h, notice = _sig("signature-card.txt"), _sig("signature-card.html"), _sig("confidentiality-notice.txt")
+    text = text.rstrip()
+    has_card_t = "296-9853" in text and "Owner" in text
+    if not has_card_t: text += "\n\n" + card_t
+    has_notice = lambda x: notice[:40] in x or ("confidential" in x.lower() and "intended only for" in x.lower())
+    if not has_notice(text): text += "\n\n" + notice
+    text += "\n"
+    if html is None:
+        body = text[: text.find(card_t)] if not has_card_t and card_t in text else text
+        body = body.replace(notice, "").rstrip()
+        p = 'font-family:Helvetica,Arial,sans-serif;font-size:14px;line-height:21px;color:#1E1E1E;margin:0 0 14px 0;'
+        html = '<!DOCTYPE html><html><head><meta charset="utf-8"></head><body style="margin:0;padding:16px;background:#ffffff;">' + "".join(
+            f'<p style="{p}">' + "<br>".join(H.escape(l) for l in para.split("\n")) + "</p>" for para in body.split("\n\n") if para.strip()) + "</body></html>"
+    has_card_h = any(k in html for k in ("logo-p.png", "logo-sig.png", "BUILDING PERFORMANCE COMPANY"))
+    add = ""
+    if not has_card_h: add += '<div style="margin-top:22px;">' + card_h + "</div>"
+    if not has_notice(html + add):
+        add += ('<p style="font-family:Helvetica,Arial,sans-serif;font-size:10px;line-height:14px;color:#8A918B;margin:18px 0 0 0;max-width:560px;">'
+                + H.escape(notice) + "</p>")
+    if add: html = html.replace("</body>", add + "</body>", 1) if "</body>" in html else html + add
+    return text, html
 def default_email(inv, acct, st):
     who = ((acct or {}).get("contact") or "").split(" ")[0] or "there"
     paid = inv.get("status") == "Paid"
@@ -328,11 +356,11 @@ def default_email(inv, acct, st):
              f"Attached is invoice {inv['number']} from PerformCore for {money2(inv.get('amount'))}" + ("." if paid else f", due {fmt_long(inv.get('due'))}."), ""]
     if not paid and st.get("payment"): lines += ["How to pay:", st["payment"], ""]
     lines += [("Thank you for your business." if paid else f"Please reference {inv['number']} with your payment. Thank you!"), "",
-              "Sean Rodriguez", st.get("bizName") or "PerformCore"] + [x for x in (st.get("phone"), st.get("email") or SELF, "performcoregroup.com") if x]
+              "Sean Rodriguez"]  # contact details come from the signature card (add_signature)
     return f"Invoice {inv['number']} from PerformCore", "\n".join(lines)
 def confirm_token(payload):
     import hashlib
-    keep = {k: payload[k] for k in ("to", "cc", "bcc", "subject", "text")}
+    keep = {k: payload[k] for k in ("to", "cc", "bcc", "subject", "text")}; keep["html"] = payload.get("html")
     keep["attachment"] = payload["attachment"]["filename"]; keep["inv"] = payload["_inv"]
     return hashlib.sha256(json.dumps(keep, sort_keys=True).encode()).hexdigest()[:10]
 def cmd_email_invoice(a):
@@ -344,10 +372,11 @@ def cmd_email_invoice(a):
     subj, body = default_email(inv, acct, st)
     if a.subject: subj = a.subject
     if a.body_file: body = open(a.body_file).read().rstrip() + "\n"
+    body, ihtml = add_signature(body)
     tmp = tempfile.mkdtemp(prefix="lhq-mail-"); path = make_pdf(inv["id"], tmp) if not a.pdf else a.pdf
     data = open(path, "rb").read(); fname = f"{inv['number']} {inv.get('party') or ''}".strip()
     fname = re.sub(r"[^\w\- &]+", "", fname).strip() + ".pdf"
-    payload = {"to": to, "cc": cc, "bcc": bcc, "subject": subj, "text": body, "attachment": {"filename": fname, "contentBase64": base64.b64encode(data).decode()},
+    payload = {"to": to, "cc": cc, "bcc": bcc, "subject": subj, "text": body, "html": ihtml, "attachment": {"filename": fname, "contentBase64": base64.b64encode(data).decode()},
                "_inv": [inv["id"], inv.get("number"), inv.get("amount"), inv.get("updated")]}
     token = confirm_token(payload)
     if a.confirm != token:
@@ -357,6 +386,8 @@ def cmd_email_invoice(a):
         if bcc: print(f"Bcc:        {', '.join(bcc)}  (copy to Sean's inbox for his records)")
         print(f"Subject:    {subj}"); print(f"Attachment: {fname} ({len(data)/1024:.1f} KB, {inv['number']}, {money2(inv.get('amount'))}, status {inv.get('status')})")
         if acct and acct.get("email") and acct["email"] not in to: print(f"Note:       the account's email on file is {acct['email']}")
+        print("HTML part:  built from the text + signature card + notice")
+        if sig_placeholder(): print("NOTE:       confidentiality notice wording is a PLACEHOLDER pending Sean's exact text")
         print("--- body ---"); print(body); print("------------")
         if a.confirm: print(f"The --confirm token doesn't match this exact email (something changed). Expected {token}.")
         print(f"To send EXACTLY this email, after Sean approves it in chat: lhq email-invoice {a.ref} ... --confirm {token}")
@@ -388,8 +419,8 @@ def cmd_email(a):
     to, cc, bcc = split(a.to), split(a.cc), split(a.bcc)
     body = open(a.body_file).read().rstrip() + "\n"
     html = open(a.html_file).read() if a.html_file else None
-    payload = {"to": to, "cc": cc, "bcc": bcc, "subject": a.subject, "text": body}
-    if html is not None: payload["html"] = html
+    body, html = add_signature(body, html)
+    payload = {"to": to, "cc": cc, "bcc": bcc, "subject": a.subject, "text": body, "html": html}
     data = None
     if a.pdf:
         data = open(a.pdf, "rb").read()
@@ -404,7 +435,8 @@ def cmd_email(a):
         if bcc: print(f"Bcc:        {', '.join(bcc)}")
         print(f"Subject:    {a.subject}")
         print(f"Attachment: {payload['attachment']['filename']} ({len(data)/1024:.1f} KB)" if data is not None else "Attachment: none")
-        print(f"HTML part:  {a.html_file} ({len(html)} chars)" if html is not None else "HTML part:  none (plain text only)")
+        print(f"HTML part:  {a.html_file or 'built from the text'} + signature card + notice ({len(html)} chars)")
+        if sig_placeholder(): print("NOTE:       confidentiality notice wording is a PLACEHOLDER pending Sean's exact text")
         print("--- body (plain text) ---"); print(body); print("------------")
         if a.confirm: print(f"The --confirm token doesn't match this exact email (something changed). Expected {token}. NOT SENT.")
         print(f"To send EXACTLY this email, after Sean approves it in chat: rerun the same command with --confirm {token}")
