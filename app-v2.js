@@ -807,6 +807,14 @@ const invSettings=()=>Object.assign({bizName:"PerformCore",prefix:"PC-",terms:7,
 function nextInvNumber(){ const st=invSettings(), p=st.prefix||""; let max=1000; data.money.forEach(m=>{ if(m.number&&String(m.number).startsWith(p)){ const n=parseInt(String(m.number).slice(p.length),10); if(n>max) max=n; } }); return p+(max+1); }
 function jobLines(a){ if(isFlat(a)&&a.lines&&a.lines.length){ const when=a.completedAt||a.when?" ("+fmtDate(a.completedAt||a.when)+")":""; return a.lines.map(l=>({desc:[a.job,l.area,l.film].filter(Boolean).join(" · ")+when,filmId:l.filmId||"",sqft:Number(l.sqft)||"",rate:Number(l.rate)||"",amount:Number(l.amount)||0})); } return [jobLine(a)]; }
 function jobLine(a){ if(isFlat(a)){ const d=[a.job,a.service,a.film].filter(Boolean).join(" · ")+(a.completedAt||a.when?" ("+fmtDate(a.completedAt||a.when)+")":""); return {desc:d,sqft:Number(a.sqft)||"",rate:Number(a.rate)||"",amount:Number(a.price||0)}; } const bits=[a.job,a.service].filter(Boolean).join(" · "); const extra=(a.notes||"").replace(/\s*\n\s*/g,"; ").trim()||a.film||""; return {desc:bits+(extra?" — "+extra:"")+(a.when?" ("+fmtDate(a.when)+")":""), vin:a.vin||"", amount:Number(a.price||0)}; }
+// J&V Cars and Detail: 30-day installer warranty only for jobs installed after Nov 14, 2026 (Sean, 11/14/2026).
+// Install date = latest linked job's completedAt, else its scheduled "when", else the invoice date.
+function jvShortWarranty(inv){
+  if(inv.accountId!=="jv") return false;
+  const ds=(inv.jobIds||[]).map(id=>((typeof data!=="undefined"&&data.tints)||[]).find(x=>x.id===id)).filter(Boolean).map(j=>String(j.completedAt||j.when||"").slice(0,10)).filter(Boolean);
+  const d=ds.length?ds.sort().pop():String(inv.date||"").slice(0,10);
+  return !!d&&d>"2026-11-14";
+}
 function buildPdf(inv){
   const st=invSettings(); const {jsPDF}=window.jspdf; const doc=new jsPDF({unit:"pt",format:"letter"});
   const W=612, M=50, DARK=[30,30,30], GREEN=[76,175,80], GRAY=[85,85,85], LG=[217,217,217], OFF=[244,244,244], WHITE=[255,255,255];
@@ -877,7 +885,7 @@ function buildPdf(inv){
   t("Customer signature",sx,y+70,{s:7,c:GRAY}); t("Date",W-140,y+70,{s:7,c:GRAY}); t("Printed name",sx,y+100,{s:7,c:GRAY});
   y=Math.max(py,y+100)+16;
   const terms=[["Payment.",isPaid?"Paid in full. Thank you for your business.":"Due within "+net+" days of the invoice date (Net "+net+"). The balance shown reflects payments received to date."],
-    ["Install warranty.","PerformCore warrants its installation for "+(((inv.division||inv.category||"")==="Automotive")?"2 years":"30 days")+" from the service date. Bubbling, peeling, lifting, edge gaps or contamination caused by the install and reported within that period will be corrected at no charge."],
+    ["Install warranty.","PerformCore warrants its installation for "+(jvShortWarranty(inv)?"30 days from the install date":((((inv.division||inv.category||"")==="Automotive")?"2 years":"30 days")+" from the service date"))+". Bubbling, peeling, lifting, edge gaps or contamination caused by the install and reported within that period will be corrected at no charge."],
     ["Curing & care.","Do not roll windows down for 3-5 days. Haze or small water pockets are normal and may take up to 30 days to clear. Wait 7 days before cleaning; use ammonia-free cleaner and a soft cloth only."],
     ["Not covered.","Scratches, impact, abrasive or razor cleaning, accidents, pre-existing glass damage, and defroster lines damaged while removing existing film."],
     ["Tint laws.","Customer selected the shades installed and is responsible for compliance with Florida window tint law. PerformCore is not liable for citations or required removal."]];
