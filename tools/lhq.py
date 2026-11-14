@@ -332,7 +332,7 @@ def add_signature(text, html=None):
     text = text.rstrip()
     has_card_t = "296-9853" in text and "Owner" in text
     if not has_card_t: text += "\n\n" + card_t
-    has_notice = lambda x: notice[:40] in x or ("confidential" in x.lower() and "intended only for" in x.lower())
+    has_notice = lambda x: notice[:40] in x or ("confidentiality notice" in x.lower() and "sole use of the intended recipient" in x.lower())
     if not has_notice(text): text += "\n\n" + notice
     text += "\n"
     if html is None:
@@ -345,7 +345,7 @@ def add_signature(text, html=None):
     add = ""
     if not has_card_h: add += '<div style="margin-top:22px;">' + card_h + "</div>"
     if not has_notice(html + add):
-        add += ('<p style="font-family:Helvetica,Arial,sans-serif;font-size:10px;line-height:14px;color:#8A918B;margin:18px 0 0 0;max-width:560px;">'
+        add += ('<p style="font-family:Helvetica,Arial,sans-serif;font-size:10px;line-height:14px;font-style:italic;color:#8A918B;margin:18px 0 0 0;max-width:560px;">'
                 + H.escape(notice) + "</p>")
     if add: html = html.replace("</body>", add + "</body>", 1) if "</body>" in html else html + add
     return text, html

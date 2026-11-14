@@ -19,5 +19,5 @@ The send-invoice function accepts an optional attachment since Nov 13, 2026 (v3,
 **Signature card (Sean, Nov 13, 2026):** `lhq email` and `lhq email-invoice` automatically end every email with Sean's signature
 card and confidentiality notice, in both the plain text and the HTML part (HTML is built from the text when no --html-file is
 given). Card/notice already present are not added twice. Sources: `email/signature-card.html`, `email/signature-card.txt`,
-`email/confidentiality-notice.txt` (wording final, approved by Sean Nov 13, 2026).
+`email/confidentiality-notice.txt` (Sean's exact wording, Nov 13, 2026; italic gray in HTML, double spaces kept in plain text).
 Invoice PDF rendering needs the `playwright` Python package (installed Nov 13, 2026; uses /usr/bin/google-chrome).
